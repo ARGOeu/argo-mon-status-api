@@ -88,7 +88,7 @@ According to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) , the `Unr
 - [#248](https://github.com/ARGOeu/argo-mon-api/pull/248) ARGO-5913 [API] Preserve incident activity when updating status description
 - [#249](https://github.com/ARGOeu/argo-mon-api/pull/249) ARGO-5914 [API] Support editing incident and status descriptions
 - [#250](https://github.com/ARGOeu/argo-mon-api/pull/250) ARGO-5919 Fix transaction locking when enabling/disabling Performance Data for a tenant- #250
-
+- [#252](https://github.com/ARGOeu/argo-mon-api/pull/252) ARGO-5921 fix secured endpoint path
 
 ## 1.0.0 - 2026-06-26
 ---

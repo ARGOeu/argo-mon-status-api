@@ -3886,7 +3886,7 @@ public class TenantEndpoint {
                     implementation = InformativeResponse.class)))
     @SecurityRequirement(name = "Authentication")
     @GET
-    @Path("{id}/results/{report-name}/groups")
+    @Path("/{id}/results/{report-name}/groups")
     @Produces(MediaType.APPLICATION_JSON)
     @SecuredEndpoint(
             params = {
