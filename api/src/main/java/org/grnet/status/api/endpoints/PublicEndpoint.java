@@ -5,7 +5,6 @@ import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.Context;
@@ -21,9 +20,6 @@ import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.eclipse.microprofile.openapi.annotations.security.SecurityRequirement;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
-import org.grnet.endpoint.scanner.runtime.ParamRef;
-import org.grnet.endpoint.scanner.runtime.ParamType;
-import org.grnet.endpoint.scanner.runtime.SecuredEndpoint;
 import org.grnet.status.api.resolvers.CheckDateFormat;
 import org.grnet.status.constraints.NotFoundEntity;
 import org.grnet.status.dtos.InformativeResponse;
@@ -36,10 +32,7 @@ import org.grnet.status.dtos.tenant.PublicTenantInformationResponseDto;
 import org.grnet.status.dtos.tenant.node.WebApiNodeMonitoringMetricResponse;
 import org.grnet.status.dtos.tenant.node.WebApiNodeStatusResponse;
 import org.grnet.status.dtos.tenant.webapi.*;
-import org.grnet.status.enums.resources.DowntimeResource;
-import org.grnet.status.enums.resources.TenantResource;
 import org.grnet.status.repositories.DowntimeRepository;
-import org.grnet.status.repositories.TenantRepository;
 import org.grnet.status.services.*;
 import org.grnet.status.services.clients.WebApiService;
 
@@ -67,6 +60,9 @@ public class PublicEndpoint {
 
     @Inject
     NodeService nodeService;
+
+    @Inject
+    IncidentService incidentService;
 
     @Operation(
             summary = "Get status page configuration by slug",
@@ -2812,5 +2808,99 @@ public class PublicEndpoint {
         var groupTimelines = statusService.retrieveStatusTimelineEndpointByNameByReport(tenant.id, reportName, endpointName, startTime, endTime);
 
         return Response.ok(groupTimelines).build();
+    }
+
+    @Operation(
+            summary = "Get all incidents.",
+            description = "Retrieves a paginated list of incidents belonging to the specified tenant. Results can be filtered by incident title or service name."
+    )
+    @APIResponse(
+            responseCode = "200",
+            description = "Incidents retrieved.",
+            content = @Content(schema = @Schema(
+                    type = SchemaType.OBJECT,
+                    implementation = TenantEndpoint.PageableIncidents.class
+            ))
+    )
+    @APIResponse(
+            responseCode = "400",
+            description = "Invalid pagination parameters.",
+            content = @Content(schema = @Schema(
+                    type = SchemaType.OBJECT,
+                    implementation = InformativeResponse.class
+            ))
+    )
+    @APIResponse(
+            responseCode = "401",
+            description = "User has not been authenticated.",
+            content = @Content(schema = @Schema(
+                    type = SchemaType.OBJECT,
+                    implementation = InformativeResponse.class
+            ))
+    )
+    @APIResponse(
+            responseCode = "403",
+            description = "Not permitted.",
+            content = @Content(schema = @Schema(
+                    type = SchemaType.OBJECT,
+                    implementation = InformativeResponse.class
+            ))
+    )
+    @APIResponse(
+            responseCode = "404",
+            description = "Tenant not found.",
+            content = @Content(schema = @Schema(
+                    type = SchemaType.OBJECT,
+                    implementation = InformativeResponse.class
+            ))
+    )
+    @APIResponse(
+            responseCode = "500",
+            description = "Incidents could not be retrieved.",
+            content = @Content(schema = @Schema(
+                    type = SchemaType.OBJECT,
+                    implementation = InformativeResponse.class
+            ))
+    )
+    @SecurityRequirement(name = "Authentication")
+    @GET
+    @Path("/tenants/{tenant-name}/incidents")
+    @Produces(MediaType.APPLICATION_JSON)
+    @PermitAll
+    public Response getAllIncidents(
+            @Parameter(
+                    description = "The name of the tenant.",
+                    required = true,
+                    example = "TENANT-TEST",
+                    schema = @Schema(type = SchemaType.STRING))
+            @PathParam("tenant-name")
+            String tenantName,
+            @Parameter(name = "page", in = QUERY,
+                    description = "Indicates the page number. Page number must be >= 1.")
+            @DefaultValue("1") @Min(value = 1, message = "Page number must be >= 1.")
+            @QueryParam("page")
+            int page,
+            @Parameter(name = "size", in = QUERY,
+                    description = "The page size.")
+            @DefaultValue("10") @Min(value = 1, message = "Page size must be between 1 and 100.") @Max(value = 100, message = "Page size must be between 1 and 100.")
+            @QueryParam("size")
+            int size,
+            @Parameter(name = "search", in = QUERY,
+                    description = "Optional text used to search incidents by title or service name.")
+            @QueryParam("search")
+            String search,
+            @Parameter(name = "date", in = QUERY,
+                    description = "Optional creation date used to filter incidents. Format: YYYY-MM-DD.",
+                    example = "2026-07-21")
+            @QueryParam("date")
+            @CheckDateFormat(pattern = "yyyy-MM-dd", message = "Valid date format is yyyy-MM-dd.")
+            String date,
+            @Context UriInfo uriInfo) {
+
+        var tenant = tenantService.getTenantByName(tenantName);
+
+        var response = incidentService.getIncidentsByPageAndSize(tenant.id, page - 1, size, search, date, uriInfo);
+
+        return Response.ok(response).build();
     }
 }
