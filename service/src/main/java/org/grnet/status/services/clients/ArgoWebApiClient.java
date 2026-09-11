@@ -4,6 +4,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
+import org.grnet.status.dtos.LatestDataResponse;
 import org.grnet.status.dtos.Status;
 import org.grnet.status.dtos.argo.ArgoStatusGroupsResponse;
 import org.grnet.status.dtos.profile.aggregation.AggregationProfileResponse;
@@ -790,5 +791,29 @@ public interface ArgoWebApiClient {
             @QueryParam("end-time") String endTime
     );
 
+    @GET
+    @Path("/api/v2/latest/{report-name}/{group-type}")
+    LatestDataResponse listLatestData(
+            @PathParam("report-name") String reportName,
+            @PathParam("group-type") String groupType,
+            @QueryParam("filter") String filter,
+            @QueryParam("limit") Integer limit,
+            @QueryParam("strict") Boolean strict,
+            @HeaderParam("x-api-key") String apiKey,
+            @HeaderParam("x-tenant-id") String tenantId
+    ) throws WebApplicationException, ProcessingException;
 
+
+    @GET
+    @Path("/api/v2/latest/{report-name}/{group-type}/{group-name}")
+    LatestDataResponse listLatestDataByGroupName(
+            @PathParam("report-name") String reportName,
+            @PathParam("group-type") String groupType,
+            @PathParam("group-name") String groupName,
+            @QueryParam("filter") String filter,
+            @QueryParam("limit") Integer limit,
+            @QueryParam("strict") Boolean strict,
+            @HeaderParam("x-api-key") String apiKey,
+            @HeaderParam("x-tenant-id") String tenantId
+    ) throws WebApplicationException, ProcessingException;
 }

@@ -5,9 +5,11 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
+import org.grnet.status.dtos.LatestDataResponse;
 import org.grnet.status.dtos.encrypt.EncryptRequestDto;
 import org.grnet.status.dtos.encrypt.EncryptResponseDto;
 import org.grnet.status.dtos.report.MiniReportResponse;
@@ -59,7 +61,7 @@ public class ReportService {
      * Retrieves a list of reports for the given tenant with optional search filtering.
      *
      * @param tenantId tenant identifier
-     * @param search search filter
+     * @param search   search filter
      * @return list of reports
      */
     public List<MiniReportResponse> fetchReportsByStatus(
@@ -96,7 +98,7 @@ public class ReportService {
      * Retrieves a list of reports for the given tenant with optional search filtering.
      *
      * @param tenantId tenant identifier
-     * @param search search filter
+     * @param search   search filter
      * @return list of reports
      */
     public List<PartialReportResponseDto> fetchReports(String tenantId, String search, Boolean publicReports, Boolean nodeReports) {
@@ -122,9 +124,9 @@ public class ReportService {
             partialReports = new ArrayList<>(partialReports);
         }
 
-        return    partialReports.stream()
-                        .sorted(Comparator.comparing(r -> r.disabled))
-                        .collect(Collectors.toList());
+        return partialReports.stream()
+                .sorted(Comparator.comparing(r -> r.disabled))
+                .collect(Collectors.toList());
 
     }
 
@@ -143,7 +145,7 @@ public class ReportService {
     /**
      * Retrieves a report by its identifier for the given tenant.
      *
-     * @param id tenant identifier
+     * @param id       tenant identifier
      * @param reportId report identifier
      * @return report response
      */
@@ -234,5 +236,93 @@ public class ReportService {
         LOG.info("Fetching reports from ARGO Web API...");
 
         return webApiService.retrieveReportsWebApi(tenantId, publicReports, Boolean.FALSE.equals(publicReports), nodeReports);
+    }
+
+    /**
+     * Returns the latest -limit- errors based on the status as received from filter  (ok, non-ok, critical, warning, ok, unknown, missing, all)
+     * @param id
+     * @param reportId
+     * @param groupType
+     * @param filter
+     * @param strict
+     * @param limit
+     * @return
+     */
+    public LatestDataResponse retrieveLatestData(String id, String reportId, String groupType, String filter, boolean strict, int limit) {
+
+        // Latest data can only be retrieved for tenants whose Reports component
+        // has been successfully initialized.
+        webApiService.validateTenantInitialized(id, "Reports");
+
+        // Retrieve the reports configured for the tenant in order to resolve the
+        // internal report name required by the Argo Web API.
+        var reports = argoWebApiClient.fetchReportsSuperAdmin(
+                accessToken, id, null, null, null);
+
+        // Find the requested report using the report ID provided by the client.
+        // The Argo Web API expects the report name rather than the report ID.
+        var report = reports.data.stream()
+                .filter(r -> reportId.equals(r.id))
+                .findFirst()
+                .orElseThrow(() ->
+                        new NotFoundException( "Fetching Report... Not found report with id: " + reportId + " for tenant with id: " + id));
+
+        try {
+            // Retrieve the latest data for the specified report and endpoint
+            // group type. The report name is used because this is what the
+            // Argo Web API expects.
+            return argoWebApiClient.listLatestData(report.info.name, groupType, filter, limit, strict, accessToken, id);
+
+        } catch (ClientWebApplicationException e) {
+
+            // A 404 from the Argo Web API indicates that the requested endpoint
+            // group type could not be found for the specified report.
+            if (e.getResponse().getStatus() == Response.Status.NOT_FOUND.getStatusCode()) {
+                throw new NotFoundException("Fetching Latest Metric Data... No endpoint group of type '" + groupType + "' was found for report '" + reportId + "' in tenant with id: " + id);}
+
+            // Propagate other data returned by the Argo Web API while adding
+            // context about the operation that failed.
+            throw new ClientWebApplicationException("Fetching Latest Metric Data... Failed to retrieve from Argo Web API.", e);
+        }
+    }
+
+
+    public LatestDataResponse retrieveLatestDataByGroupName(String id, String reportId, String groupType, String groupName, String filter, boolean strict, int limit) {
+
+        // Latest data can only be retrieved for tenants whose Reports component
+        // has been successfully initialized.
+        webApiService.validateTenantInitialized(id, "Reports");
+
+        // Retrieve the reports configured for the tenant in order to resolve the
+        // internal report name required by the Argo Web API.
+        var reports = argoWebApiClient.fetchReportsSuperAdmin(
+                accessToken, id, null, null, null);
+
+        // Find the requested report using the report ID provided by the client.
+        // The Argo Web API expects the report name rather than the report ID.
+        var report = reports.data.stream()
+                .filter(r -> reportId.equals(r.id))
+                .findFirst()
+                .orElseThrow(() ->
+                        new NotFoundException("Fetching Report... Not found report with id: " + reportId + " for tenant with id: " + id));
+
+        try {
+            // Retrieve the latest data for the specified endpoint group type
+            // and group name. The report name is used because this is what the
+            // Argo Web API expects.
+            return argoWebApiClient.listLatestDataByGroupName(report.info.name, groupType, groupName, filter, limit, strict, accessToken, id);
+
+        } catch (ClientWebApplicationException e) {
+
+            // A 404 from the Argo Web API indicates that the requested endpoint
+            // group could not be found for the specified report.
+            if (e.getResponse().getStatus() == Response.Status.NOT_FOUND.getStatusCode()) {
+                throw new NotFoundException("Fetching Latest Metric Data... No endpoint group of type '" + groupType + "' was found for report '" + reportId + "' in tenant with id: " + id);
+            }
+
+            // Propagate other data returned by the Argo Web API while adding
+            // context about the operation that failed.
+            throw new ClientWebApplicationException("Fetching Latest Metric Data... Failed to retrieve from Argo Web API.", e);
+        }
     }
 }

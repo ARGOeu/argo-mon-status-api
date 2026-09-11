@@ -33,7 +33,9 @@ import org.grnet.endpoint.scanner.runtime.clients.groupmanagement.response.Group
 import org.grnet.endpoint.scanner.runtime.context.RoleEndpointHolder;
 import org.grnet.status.api.resolvers.CheckDateFormat;
 import org.grnet.status.constraints.NotFoundEntity;
+import org.grnet.status.constraints.ValidLatestDataStatusFilter;
 import org.grnet.status.dtos.InformativeResponse;
+import org.grnet.status.dtos.LatestDataResponse;
 import org.grnet.status.dtos.Status;
 import org.grnet.status.dtos.downtime.DowntimeRequest;
 import org.grnet.status.dtos.downtime.DowntimeResponse;
@@ -7389,5 +7391,221 @@ public class TenantEndpoint {
         var groupTimelines = statusService.retrieveStatusTimelineEndpointByNameByReport(id, reportName, endpointName, startTime, endTime);
 
         return Response.ok(groupTimelines).build();
+    }
+
+
+    @Tag(name = "Reports")
+    @Operation(
+            summary = "Fetch the N latest data for the specified report, group type of the tenant",
+            description = "Returns the the N latest data for the specified report, group type, group name of the tenant"
+    )
+    @APIResponse(
+            responseCode = "200",
+            description = "Latest data fetched successfully.",
+            content = @Content(schema = @Schema(
+                    implementation = LatestDataResponse.class))
+    )
+    @APIResponse(
+            responseCode = "400",
+            description = "Invalid request parameters.",
+            content = @Content(schema = @Schema(
+                    implementation = InformativeResponse.class))
+    )
+    @APIResponse(
+            responseCode = "401",
+            description = "User not authenticated.",
+            content = @Content(schema = @Schema(
+                    implementation = InformativeResponse.class))
+    )
+    @APIResponse(
+            responseCode = "403",
+            description = "Not permitted.",
+            content = @Content(schema = @Schema(
+                    implementation = InformativeResponse.class))
+    )
+    @APIResponse(
+            responseCode = "404",
+            description = "Latest data not found.",
+            content = @Content(schema = @Schema(
+                    implementation = InformativeResponse.class))
+    )
+    @APIResponse(
+            responseCode = "500",
+            description = "Internal server error.",
+            content = @Content(schema = @Schema(
+                    implementation = InformativeResponse.class))
+    )
+    @SecurityRequirement(name = "Authentication")
+    @GET
+    @Path("/{id}/report/{report-id}/groups-type/{group-type}/latest-data")
+    @Produces(MediaType.APPLICATION_JSON)
+    @SecuredEndpoint(
+            params = {
+                    @ParamRef(
+                            param = "id",
+                            type = ParamType.PATH,
+                            referTo = TenantResource.class
+                    )
+            }
+    )
+    public Response getLatestData(
+            @Parameter(
+                    description = "The ID of the tenant.",
+                    required = true,
+                    example = "42c1152d-e23c-4a19-b51a-b27f1eb7f37f",
+                    schema = @Schema(type = SchemaType.STRING))
+            @PathParam("id")
+            @Valid
+            @NotFoundEntity(repository = TenantRepository.class, message = "There is no Tenant with the following id: ")
+            String id,
+            @Parameter(
+                    description = "The id of the tenant's report.",
+                    required = true,
+                    example = "c7a6b0d4-4885-46da-9dd1-1f91d0e9142e",
+                    schema = @Schema(type = SchemaType.STRING))
+            @PathParam("report-id")
+            @Valid
+            String reportId,
+            @Parameter(
+                    description = "The group type ",
+                    required = true,
+                    example = "SERVICEGROUPS",
+                    schema = @Schema(type = SchemaType.STRING))
+            @PathParam("group-type")
+            @Valid
+            String groupType,
+            @Parameter(name = "filter", in = QUERY,
+                    description = "Filter errors by status.")
+            @ValidLatestDataStatusFilter
+            @DefaultValue("all")
+            @QueryParam("filter") String filter,
+            @Parameter(name = "strict", in = QUERY,
+                    description = "the servce will return only the latest entry grouped by endpoint_group/host/service/metric",
+                    example = "false")
+            @QueryParam("strict")
+            @DefaultValue("false")
+            Boolean strict,
+            @Parameter(name = "limit", in = QUERY,
+                    description = "the limit",
+                    example = "500")
+            @QueryParam("limit")
+            Integer limit) {
+
+        var metricDetails = reportService.retrieveLatestData(
+                id, reportId,groupType, filter, strict,limit);
+
+        return Response.ok(metricDetails).build();
+    }
+
+
+    @Tag(name = "Reports")
+    @Operation(
+            summary = "Fetch the N latest data for the specified report, group type, group name of the tenant",
+            description = "Returns the N latest data for the specified report, group type, group name of the tenant"
+    )
+    @APIResponse(
+            responseCode = "200",
+            description = "Latest data etched successfully.",
+            content = @Content(schema = @Schema(
+                    implementation = LatestDataResponse.class))
+    )
+    @APIResponse(
+            responseCode = "400",
+            description = "Invalid request parameters.",
+            content = @Content(schema = @Schema(
+                    implementation = InformativeResponse.class))
+    )
+    @APIResponse(
+            responseCode = "401",
+            description = "User not authenticated.",
+            content = @Content(schema = @Schema(
+                    implementation = InformativeResponse.class))
+    )
+    @APIResponse(
+            responseCode = "403",
+            description = "Not permitted.",
+            content = @Content(schema = @Schema(
+                    implementation = InformativeResponse.class))
+    )
+    @APIResponse(
+            responseCode = "404",
+            description = "Latest data not found.",
+            content = @Content(schema = @Schema(
+                    implementation = InformativeResponse.class))
+    )
+    @APIResponse(
+            responseCode = "500",
+            description = "Internal server error.",
+            content = @Content(schema = @Schema(
+                    implementation = InformativeResponse.class))
+    )
+    @SecurityRequirement(name = "Authentication")
+    @GET
+    @Path("/{id}/report/{report-id}/groups-type/{group-type}/{group-name}/latest-data")
+    @Produces(MediaType.APPLICATION_JSON)
+    @SecuredEndpoint(
+            params = {
+                    @ParamRef(
+                            param = "id",
+                            type = ParamType.PATH,
+                            referTo = TenantResource.class
+                    )
+            }
+    )
+    public Response getLatestDataByGroupName(
+            @Parameter(
+                    description = "The ID of the tenant.",
+                    required = true,
+                    example = "42c1152d-e23c-4a19-b51a-b27f1eb7f37f",
+                    schema = @Schema(type = SchemaType.STRING))
+            @PathParam("id")
+            @Valid
+            @NotFoundEntity(repository = TenantRepository.class, message = "There is no Tenant with the following id: ")
+            String id,
+            @Parameter(
+                    description = "The id of the tenant's report.",
+                    required = true,
+                    example = "c7a6b0d4-4885-46da-9dd1-1f91d0e9142e",
+                    schema = @Schema(type = SchemaType.STRING))
+            @PathParam("report-id")
+            @Valid
+            String reportId,
+            @Parameter(
+                    description = "The group type ",
+                    required = true,
+                    example = "SERVICEGROUPS",
+                    schema = @Schema(type = SchemaType.STRING))
+            @PathParam("group-type")
+            @Valid
+            String groupType,
+            @Parameter(
+                    description = "The group name ",
+                    required = true,
+                    example = "HELPDESK",
+                    schema = @Schema(type = SchemaType.STRING))
+            @PathParam("group-name")
+            @Valid
+            String groupName,
+            @Parameter(name = "filter", in = QUERY,
+                    description = "Filter errors by status.")
+            @ValidLatestDataStatusFilter
+            @DefaultValue("all")
+            @QueryParam("filter") String filter,
+            @Parameter(name = "strict", in = QUERY,
+                    description = "the servce will return only the latest entry grouped by endpoint_group/host/service/metric",
+                    example = "false")
+            @QueryParam("strict")
+            @DefaultValue("false")
+            Boolean strict,
+            @Parameter(name = "limit", in = QUERY,
+                    description = "the limit",
+                    example = "500")
+            @QueryParam("limit")
+            Integer limit) {
+
+        var metricDetails = reportService.retrieveLatestDataByGroupName(
+                id, reportId,groupType,groupName, filter, strict,limit);
+
+        return Response.ok(metricDetails).build();
     }
 }
