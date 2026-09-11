@@ -71,6 +71,7 @@ According to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) , the `Unr
 - [#241](https://github.com/ARGOeu/argo-mon-api/pull/241) ARGO-5880 create a INIT_PERFORMANCE_DATA event
 - [#242](https://github.com/ARGOeu/argo-mon-api/pull/242) ARGO-5883 [API] Support multiple affected services per incident
 - [#244](https://github.com/ARGOeu/argo-mon-api/pull/244) ARGO-5905: Support a description field for incident status changes
+- [#254](https://github.com/ARGOeu/argo-mon-api/pull/254) Add a public API endpoint for the incidents list
  
 ### Fix 
 

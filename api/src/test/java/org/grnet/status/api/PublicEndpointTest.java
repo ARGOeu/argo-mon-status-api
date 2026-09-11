@@ -11,6 +11,10 @@ import org.grnet.endpoint.scanner.runtime.repositories.RoleEndpointRepository;
 import org.grnet.status.dtos.Status;
 import org.grnet.status.dtos.ams.PublishRequest;
 import org.grnet.status.dtos.ams.PublishResponse;
+import org.grnet.status.dtos.incident.IncidentRequestDto;
+import org.grnet.status.dtos.incident.IncidentResponseDto;
+import org.grnet.status.dtos.incident.ServiceDto;
+import org.grnet.status.dtos.pagination.PageResource;
 import org.grnet.status.dtos.report.FullReportResponseDto;
 import org.grnet.status.dtos.report.MiniReportResponse;
 import org.grnet.status.dtos.report.PartialReportResponseDto;
@@ -34,6 +38,7 @@ import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -134,7 +139,9 @@ public class PublicEndpointTest extends KeycloakTest {
     private void mockSuperAdmin() {
         entitlementProvider.setSuperAdmin(true);
         entitlementProvider.setEntitlements(List.of());
-    }private TenantWebApiGetResponse loadMockTenantGetResponse(String id) {
+    }
+
+    private TenantWebApiGetResponse loadMockTenantGetResponse(String id) {
 
         var response = new TenantWebApiGetResponse();
 
@@ -159,22 +166,7 @@ public class PublicEndpointTest extends KeycloakTest {
 
         return response;
     }
-    //
-//    private TenantWebApiCreateResponse loadMockTenantGetResponse(String id) {
-//
-//        var tenantWebApiResponse = new TenantWebApiCreateResponse();
-//        var data = new TenantWebApiCreateResponse.Data();
-//        var link = new TenantWebApiCreateResponse.Links();
-//        var status = new Status();
-//        status.setCode("200");
-//        status.setMessage("Τenant was succesfully created");
-//        link.setSelf("https://https://test.api.grnet.gr/api/v2/admin/tenants/e1ab046c-8544-47e6-bd8f-e8aa8b83acb3");
-//        data.setId(id);
-//        data.setLinks(link);
-//        tenantWebApiResponse.setData(data);
-//        tenantWebApiResponse.setStatus(status);
-//        return tenantWebApiResponse;
-//    }
+
     private WebApiReportResponse loadMockReportsResponse(String tenantId) {
 
         var response = new WebApiReportResponse();
@@ -239,19 +231,8 @@ public class PublicEndpointTest extends KeycloakTest {
         tenantWebApiResponse.setStatus(status);
         return tenantWebApiResponse;
     }
-    //    @BeforeEach
-//    void mockAms() {
-//        var mockClient = mock(org.grnet.status.services.clients.AmsClient.class);
-//
-//        when(amsClientFactory.buildClient(anyString()))
-//                .thenReturn(mockClient);
-//
-//        var resp = new org.grnet.status.dtos.ams.PublishResponse();
-//        resp.setMessageIds(List.of("mock-msg"));
-//
-//        when(mockClient.publish(anyString(), anyString(), anyString(), any()))
-//                .thenReturn(resp);
-//    }
+
+
     private TenantResponseDto createTenant(String tenantName) {
         var request = new TenantRequestDto();
         var tenantInfo = new TenantInfoDto();
@@ -404,6 +385,76 @@ public class PublicEndpointTest extends KeycloakTest {
         assertEquals(1, response.data.size());
         assertEquals("CLOUD-B", response.data.get(0).name);
         assertEquals(BigDecimal.valueOf(100), response.data.get(0).results.get(0).availability);
+    }
+
+    @Test
+    public void getAllPublicIncidentsWithoutAuthentication() {
+
+        currentMockId = UUID.randomUUID().toString();
+
+        mockSuperAdmin();
+
+        var tenant = createTenant("LOCALTENANT");
+
+        currentMockId = tenant.id;
+
+        createIncident(tenant.id);
+
+        var response = given()
+                .header("Origin", "https://frontend.com")
+                .queryParam("page", 1)
+                .queryParam("size", 10)
+                .when()
+                .get("/v1/public/tenants/{tenant-name}/incidents", tenant.info.name)
+                .then()
+                .statusCode(200)
+                .header("Access-Control-Allow-Origin", "*")
+                .extract()
+                .as(PageResource.class);
+
+        assertNotNull(response);
+        assertEquals(1, response.getTotalElements());
+    }
+
+    private IncidentResponseDto createIncident(String tenantId) {
+        return given()
+                .auth().oauth2(adminToken)
+                .contentType(ContentType.JSON)
+                .body(buildIncidentRequest())
+                .post("/v1/tenants/{id}/incidents", tenantId)
+                .then()
+                .statusCode(201)
+                .extract()
+                .as(IncidentResponseDto.class);
+    }
+
+    private IncidentRequestDto buildIncidentRequest() {
+        return buildIncidentRequest(
+                "ESHOP unavailable",
+                "Users cannot access the ESHOP service.",
+                "6a6e8037-1e23-4b65-a75a-37d9e8d5bc44",
+                "ESHOP"
+        );
+    }
+
+    private IncidentRequestDto buildIncidentRequest(
+            String title,
+            String description,
+            String serviceId,
+            String serviceName) {
+
+        var request = new IncidentRequestDto();
+
+        request.title = title;
+        request.description = description;
+
+        var service = new ServiceDto();
+        service.id = serviceId;
+        service.name = serviceName;
+
+        request.services = List.of(service);
+
+        return request;
     }
 
 
