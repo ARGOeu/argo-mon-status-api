@@ -17,6 +17,9 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.grnet.endpoint.scanner.runtime.clients.groupmanagement.AuthGroupManagement;
 import org.grnet.endpoint.scanner.runtime.clients.groupmanagement.response.GroupUserResponse;
 import org.grnet.endpoint.scanner.runtime.context.RoleEndpointHolder;
+import org.grnet.endpoint.scanner.runtime.services.OidcResourceAuthorizationService;
+import org.grnet.endpoint.scanner.runtime.entitlements.qualifiers.ExternalSystemAuthorization;
+
 import org.grnet.endpoint.scanner.runtime.services.ResourceAuthorizationService;
 import org.grnet.status.dtos.ams.PublishRequest;
 import org.grnet.status.dtos.pagination.PageResource;
@@ -81,7 +84,8 @@ public class TenantService {
     AuthGroupManagement groupManagement;
 
     @Inject
-    ResourceAuthorizationService resourceAuthorizationService;
+    @ExternalSystemAuthorization
+    OidcResourceAuthorizationService resourceAuthorizationService;
 
     @Inject
     Utility utility;

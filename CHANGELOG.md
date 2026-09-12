@@ -253,6 +253,7 @@ According to [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) , the `Unr
 - [#138](https://github.com/ARGOeu/argo-mon-status-api/pull/138) ARGO-5687 Fix entitlement searching for list tenants
 - [#135](https://github.com/ARGOeu/argo-mon-status-api/pull/135) ARGO-5688 Enhance tenant invitation with quarkus auth role management
 - [#114](https://github.com/ARGOeu/argo-mon-status-api/pull/114) ARGO-5471: Add node capabilities endpoints for availability and status
+- [#199](https://github.com/ARGOeu/argo-mon-status-api/pull/199) ARGO-5670 Fix Quarkus Authorization CDI integration after Quarkus Auth API changed
 
 ### Removed
 

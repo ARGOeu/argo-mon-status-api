@@ -7,6 +7,8 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import org.grnet.endpoint.scanner.runtime.clients.groupmanagement.AuthGroupManagement;
 import org.grnet.endpoint.scanner.runtime.clients.groupmanagement.response.*;
+import org.grnet.endpoint.scanner.runtime.services.OidcResourceAuthorizationService;
+import org.grnet.endpoint.scanner.runtime.entitlements.qualifiers.ExternalSystemAuthorization;
 import org.grnet.endpoint.scanner.runtime.services.ResourceAuthorizationService;
 import org.grnet.status.dtos.pagination.PageResource;
 import org.grnet.status.entities.Page;
@@ -35,7 +37,8 @@ public class GroupManagementService {
     TenantRepository tenantRepository;
 
     @Inject
-    ResourceAuthorizationService resourceAuthorizationService;
+    @ExternalSystemAuthorization
+    OidcResourceAuthorizationService resourceAuthorizationService;
 
     @ConfigProperty(name = "api.auth.entitlements.parent-group")
     String parentGroup;
